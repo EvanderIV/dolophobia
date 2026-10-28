@@ -3,154 +3,642 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dolophobia Dev Console</title>
+<title>Dolophobia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&family=IM+Fell+English:ital@0;1&family=Special+Elite&display=swap" rel="stylesheet">
 <style>
-  :root { --bg: #0e0f12; --panel: #17191e; --line: #2a2d35; --text: #d8dbe2; --dim: #8a8f9c; --accent: #c9433b; --ok: #4fae7a; }
+  :root {
+    --paper: #e6d8b8;
+    --paper-shade: #cbb487;
+    --ink: #2b2118;        /* typewriter */
+    --pen: #23315c;        /* ballpoint */
+    --blood: #8c1c13;      /* red ink */
+    --faded: #6f5d45;
+    --wood: #2f1d12;
+
+    --paper-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .32 0 0 0 0 .22 0 0 0 0 .1 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    --wood-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='900'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.003 .085' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .05 0 0 0 0 .025 0 0 0 0 .01 0 0 0 1.1 -.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23w)'/%3E%3C/svg%3E");
+  }
+
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 ui-monospace, Consolas, monospace; }
-  header { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  header strong { margin-right: 8px; }
-  input, select, button { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; font: inherit; }
-  button { cursor: pointer; } button:hover { border-color: var(--dim); }
-  #status { color: var(--dim); margin-left: auto; }
-  main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 12px 16px; }
-  section { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px; min-width: 0; }
-  h2 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); }
-  pre { margin: 0; white-space: pre-wrap; word-break: break-word; max-height: 50vh; overflow: auto; }
-  #log div { border-bottom: 1px solid var(--line); padding: 2px 0; }
-  .err { color: var(--accent); } .ok { color: var(--ok); }
-  .row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
-  #cams img { width: 100%; max-width: 320px; image-rendering: pixelated; border: 1px solid var(--line); }
-  @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+  [hidden] { display: none !important; }
+  html, body { min-height: 100%; }
+
+  /* ---------- the table ---------- */
+  body {
+    margin: 0;
+    overflow-x: hidden;
+    color: var(--ink);
+    font: 15px/1.55 "Special Elite", "Courier New", monospace;
+    background-color: var(--wood);
+    background-image:
+      repeating-linear-gradient(180deg, transparent 0 196px, rgba(0,0,0,.55) 196px 199px, rgba(255,214,170,.05) 199px 200px),
+      var(--wood-grain),
+      linear-gradient(180deg, #3a2416, #26170e 60%, #1d120b);
+  }
+  .lamp, .vignette, .mist { position: fixed; pointer-events: none; }
+  .lamp {
+    inset: 0; z-index: 0;
+    background: radial-gradient(ellipse 70% 55% at 50% 18%, rgba(255,176,96,.22), rgba(255,150,70,.06) 45%, transparent 70%);
+    animation: breathe 9s ease-in-out infinite alternate;
+  }
+  .vignette { inset: 0; z-index: 1; background: radial-gradient(ellipse at 50% 45%, transparent 35%, rgba(5,3,2,.82) 100%); }
+  .mist {
+    inset: -25% -60%; z-index: 1;
+    background:
+      radial-gradient(38% 22% at 18% 62%, rgba(206,210,220,.17), transparent 70%),
+      radial-gradient(30% 18% at 52% 38%, rgba(206,210,220,.12), transparent 70%),
+      radial-gradient(44% 26% at 84% 72%, rgba(206,210,220,.15), transparent 70%),
+      radial-gradient(26% 16% at 70% 22%, rgba(206,210,220,.10), transparent 70%);
+    filter: blur(18px);
+    will-change: transform;
+    animation: drift 95s ease-in-out infinite alternate;
+  }
+  .mist.two { animation-duration: 140s; animation-direction: alternate-reverse; transform: scaleY(-1); opacity: .8; }
+  .mist.over { z-index: 5; opacity: .35; animation-duration: 120s; }
+  @keyframes drift { from { transform: translate3d(-14%, 3%, 0); } to { transform: translate3d(14%, -3%, 0); } }
+  @keyframes breathe { from { opacity: .85; } to { opacity: 1; } }
+
+  /* ---------- the book ---------- */
+  .book {
+    position: relative; z-index: 2;
+    width: min(1120px, calc(100% - 32px));
+    margin: clamp(16px, 6vh, 64px) auto;
+    perspective: 2400px;
+    transform: rotate(-.6deg);
+  }
+  .book::before { /* shadow the book casts on the table */
+    content: ""; position: absolute; inset: 4% 2% -3%; z-index: -1;
+    background: rgba(0,0,0,.6); filter: blur(28px); border-radius: 40%;
+  }
+  .spread { display: none; grid-template-columns: 1fr 1fr; margin: 0; padding: 0; border: 0; min-width: 0; }
+  .book[data-spread="warning"] .spread[data-name="warning"],
+  .book[data-spread="join"] .spread[data-name="join"],
+  .book[data-spread="console"] .spread[data-name="console"] { display: grid; }
+
+  .page-wrap { filter: drop-shadow(0 2px 1px rgba(0,0,0,.35)); min-width: 0; }
+  .page {
+    position: relative;
+    min-height: min(720px, 86vh);
+    height: 100%;
+    padding: clamp(24px, 4vw, 52px) clamp(22px, 4vw, 56px) 56px;
+    background-color: var(--paper);
+    background-image:
+      radial-gradient(circle at 78% 12%, rgba(120,80,30,.16), transparent 18%),
+      radial-gradient(ellipse at 20% 88%, rgba(110,70,25,.14), transparent 30%),
+      radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(120,85,40,.35) 100%),
+      var(--paper-noise);
+    clip-path: var(--torn, none);
+  }
+  .left .page  { box-shadow: inset -42px 0 46px -30px rgba(60,32,8,.55); }
+  .right .page { box-shadow: inset 42px 0 46px -30px rgba(60,32,8,.55); }
+  .folio { position: absolute; bottom: 22px; left: 0; right: 0; text-align: center; color: var(--faded); font-size: 12px; }
+  .ruled {
+    background-image:
+      repeating-linear-gradient(180deg, transparent 0 27px, rgba(70,90,140,.22) 27px 28px),
+      radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(120,85,40,.35) 100%),
+      var(--paper-noise);
+  }
+
+  /* page turn */
+  .leaf {
+    display: none; position: absolute; top: 0; bottom: 0; left: 50%; width: 50%; z-index: 3;
+    transform-origin: left center;
+    background: var(--paper) var(--paper-noise);
+    clip-path: var(--torn, none);
+  }
+  .book.turning .leaf { display: block; animation: turn .9s cubic-bezier(.45,.05,.35,1) forwards; }
+  @keyframes turn {
+    0%   { transform: rotateY(0deg);    filter: brightness(1); opacity: 1; }
+    50%  { transform: rotateY(-90deg);  filter: brightness(.6); }
+    85%  { transform: rotateY(-170deg); filter: brightness(.95); opacity: 1; }
+    100% { transform: rotateY(-180deg); opacity: 0; }
+  }
+
+  /* ---------- type ---------- */
+  h1, h2, h3 { font-family: "IM Fell English", Georgia, serif; font-weight: 400; margin: 0 0 .4em; color: var(--ink); }
+  h1 { font-size: clamp(2.6rem, 7vw, 4.4rem); line-height: 1; letter-spacing: .01em; }
+  h2 { font-size: clamp(1.6rem, 3vw, 2.1rem); }
+  h3 { font-size: 1.25rem; font-style: italic; }
+  p { margin: 0 0 .9em; }
+  .hand { font-family: "Caveat", "Segoe Print", cursive; color: var(--pen); font-size: 1.55rem; line-height: 1.15; }
+  .small { font-size: 12px; color: var(--faded); letter-spacing: .04em; }
+  .red { color: var(--blood); }
+  .struck { text-decoration: line-through; text-decoration-color: var(--blood); text-decoration-thickness: 2px; }
+
+  /* ---------- controls ---------- */
+  button { font: inherit; cursor: pointer; }
+  button:disabled { cursor: not-allowed; opacity: .4; }
+  :focus-visible { outline: 2px dashed var(--pen); outline-offset: 3px; }
+
+  .stamp {
+    display: inline-block;
+    padding: 10px 22px 8px;
+    border: 3px double currentColor;
+    border-radius: 4px;
+    background: none;
+    color: var(--blood);
+    font: 1.05rem "Special Elite", monospace;
+    letter-spacing: .18em; text-transform: uppercase;
+    transform: rotate(-4deg);
+    mix-blend-mode: multiply; opacity: .88;
+    transition: transform .12s ease, opacity .12s ease;
+  }
+  .stamp:hover:not(:disabled) { opacity: 1; transform: rotate(-4deg) scale(1.03); }
+  .stamp:active:not(:disabled) { transform: rotate(-4deg) scale(.95) translateY(2px); }
+  .stamp.blue { color: var(--pen); }
+
+  .ink-btn {
+    background: none; border: 0; padding: 2px 4px;
+    font: 1.45rem "Caveat", cursive; color: var(--pen);
+  }
+  .ink-btn:hover:not(:disabled) { text-decoration: underline wavy rgba(35,49,92,.6); text-underline-offset: 4px; }
+  .ink-btn.on { color: var(--blood); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+
+  .words { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-bottom: 8px; }
+
+  .field { display: block; margin-bottom: 22px; }
+  .field > span { display: block; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--faded); }
+  .field input, .inline-input {
+    width: 100%;
+    border: 0; border-bottom: 1.5px solid rgba(43,33,24,.45);
+    background: transparent;
+    font: 1.9rem "Caveat", cursive; color: var(--pen);
+    padding: 2px 4px 0;
+  }
+  .field input::placeholder { color: rgba(35,49,92,.3); }
+  .field input:focus { outline: none; border-bottom-color: var(--pen); }
+  #lobby { text-transform: uppercase; letter-spacing: .3em; }
+  .inline-input { width: 3.2em; font-size: 1.5rem; }
+
+  /* role cards */
+  .roles { border: 0; margin: 0 0 18px; padding: 0; display: grid; gap: 14px; }
+  .roles legend { padding: 0; margin-bottom: 10px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .card {
+    position: relative; display: block; cursor: pointer;
+    padding: 12px 16px 10px;
+    background: rgba(255,248,230,.55) var(--paper-noise);
+    box-shadow: 0 1px 2px rgba(0,0,0,.25), 0 6px 12px -8px rgba(0,0,0,.4);
+    transition: transform .2s ease;
+  }
+  .card:nth-of-type(1) { transform: rotate(-.8deg); }
+  .card:nth-of-type(2) { transform: rotate(.6deg); }
+  .card:nth-of-type(3) { transform: rotate(-.3deg); }
+  .card:hover { transform: rotate(0) translateY(-2px); }
+  .card strong { position: relative; display: inline-block; font: 1.45rem "IM Fell English", serif; font-weight: 400; }
+  .card span { display: block; font-size: 13px; }
+  .card .circle { position: absolute; left: -22px; top: -10px; width: calc(100% + 44px); height: calc(100% + 18px); overflow: visible; pointer-events: none; }
+  .card .circle path { fill: none; stroke: var(--pen); stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset .55s ease; }
+  input:checked + .card .circle path { stroke-dashoffset: 0; }
+  input:checked + .card { transform: rotate(0); }
+  input:focus-visible + .card { outline: 2px dashed var(--pen); outline-offset: 4px; }
+  .card.ghost .circle path { stroke: var(--blood); }
+
+  .note { min-height: 2.4em; }
+
+  /* polaroid */
+  .polaroid {
+    position: relative; margin: 10px 0 18px; padding: 10px 10px 6px; width: min(100%, 340px);
+    background: #f3efe6; box-shadow: 0 2px 4px rgba(0,0,0,.3), 0 12px 20px -10px rgba(0,0,0,.5);
+    transform: rotate(1.4deg);
+  }
+  .polaroid::before { /* tape */
+    content: ""; position: absolute; top: -12px; left: 50%; width: 90px; height: 24px; margin-left: -45px;
+    background: rgba(238,228,196,.6); transform: rotate(-3deg); box-shadow: 0 1px 1px rgba(0,0,0,.1);
+  }
+  .polaroid img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #121212; filter: grayscale(.35) contrast(1.1); }
+  .polaroid figcaption { font: 1.35rem "Caveat", cursive; color: var(--pen); padding-top: 4px; }
+
+  .notes {
+    margin: 0 0 16px; max-height: 280px; overflow: auto;
+    font: 12px/1.5 "Special Elite", monospace; color: var(--ink); white-space: pre-wrap; word-break: break-word;
+  }
+  .log { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow: auto; }
+  .log li { display: grid; grid-template-columns: 4.6em 1fr; gap: 8px; align-items: baseline; line-height: 28px; }
+  .log time { font-size: 11px; color: var(--faded); }
+  .log span { font: 1.3rem "Caveat", cursive; color: var(--pen); }
+  .log li.blood span { color: var(--blood); font-weight: 600; }
+  .log li.faint span { color: var(--faded); }
+  .notes, .log { scrollbar-width: thin; scrollbar-color: rgba(43,33,24,.35) transparent; }
+
+  .tag {
+    position: fixed; top: 14px; right: 16px; z-index: 6;
+    padding: 6px 14px 5px 22px;
+    background: #d9c79f var(--paper-noise);
+    font-size: 12px; letter-spacing: .06em;
+    clip-path: polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 50%);
+    box-shadow: 0 2px 6px rgba(0,0,0,.4);
+    transform: rotate(2deg);
+  }
+  .tag::before { content: ""; position: absolute; left: 9px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: var(--wood); }
+
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+  .section { margin-bottom: 22px; }
+  .spacer { height: 18px; }
+
+  @media (max-width: 780px) {
+    .book { transform: none; }
+    .spread { grid-template-columns: 1fr; }
+    .page { min-height: auto; height: auto; padding-bottom: 60px; }
+    .left .page, .right .page { box-shadow: none; }
+    .page-wrap + .page-wrap { margin-top: -6px; }
+    .book.turning .leaf { display: none; }
+    .tag { position: absolute; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mist, .lamp { animation: none; }
+    .book.turning .leaf { display: none; }
+    .card, .stamp, .card .circle path { transition: none; }
+  }
 </style>
 </head>
 <body>
-<header>
-  <strong>Dolophobia dev console</strong>
-  <input id="lobby" placeholder="Lobby" size="7" autocomplete="off">
-  <select id="role"><option>intern</option><option>ghost</option><option>admin</option></select>
-  <input id="pin" placeholder="PIN" size="7" autocomplete="off">
-  <input id="name" placeholder="Name" size="10">
-  <button id="join">Join</button>
-  <span id="status">disconnected</span>
-</header>
-<main>
-  <section>
-    <h2>Commands</h2>
-    <div class="row">
-      <select id="ghostKind"></select>
-      <button data-cmd="ghost.event">ghost.event</button>
-      <button data-cmd="ghost.hunt">ghost.hunt</button>
-      <button data-cmd="ghost.stop_hunt">ghost.stop_hunt</button>
-    </div>
-    <div class="row">
-      <input id="camIndex" type="number" min="0" value="0" style="width:5em">
-      <button data-cmd="cctv.watch">cctv.watch</button>
-      <button id="unwatch">stop watching</button>
-    </div>
-    <div class="row">
-      <input id="actor" type="number" placeholder="actor" style="width:6em">
-      <input id="sanity" type="number" min="0" max="100" value="50" style="width:5em">
-      <button data-cmd="sanity.set">sanity.set</button>
-    </div>
-    <div class="row">
-      <input id="kickToken" placeholder="token prefix (8)" size="12">
-      <button data-cmd="session.kick">session.kick</button>
-    </div>
-    <h2>Camera</h2>
-    <div id="cams"><img id="camImg" alt="No camera frames yet"></div>
+<div class="lamp"></div>
+<div class="mist"></div>
+<div class="mist two"></div>
+<div class="vignette"></div>
+
+<div id="status" class="tag" role="status">not connected</div>
+
+<main id="book" class="book" data-spread="warning">
+  <div class="leaf" aria-hidden="true"></div>
+
+  <!-- ===== spread 1: warning ===== -->
+  <section class="spread" data-name="warning" aria-label="Warning">
+    <div class="page-wrap left"><div class="page">
+      <p class="small">Property of the investigation. If found, do not return.</p>
+      <div class="spacer"></div>
+      <h1>Dolophobia</h1>
+      <p class="hand">field journal</p>
+      <div class="spacer"></div>
+      <p>Whoever finds this: the house is real enough. Everything that happens in it happens to the people inside.</p>
+      <p>Read the next page before you go any further.</p>
+      <p class="folio">— i —</p>
+    </div></div>
+    <div class="page-wrap right"><div class="page">
+      <h2>Photosensitivity warning</h2>
+      <p>A small percentage of people may experience seizures when exposed to certain visual images, including flashing lights or patterns. Even people with no history of seizures or epilepsy may have an undiagnosed condition that can cause them while playing.</p>
+      <p><span class="red">The Ghost role is built to be disorienting.</span> It uses flashing and pulsing effects, sudden bright light, red vignettes that close in on the screen, and loud, distorted audio.</p>
+      <p>If you or anyone in your family has a history of seizures or epilepsy, talk to a doctor before playing. Stop immediately if you feel dizzy or disoriented, or notice altered vision, eye or muscle twitches, loss of awareness, or any involuntary movement.</p>
+      <p>It's also a horror game. It's meant to frighten you.</p>
+      <div class="spacer"></div>
+      <button id="ack" class="stamp" type="button">I understand</button>
+      <p class="folio">— ii —</p>
+    </div></div>
   </section>
-  <section>
-    <h2>View</h2>
-    <pre id="view">(join to receive)</pre>
-  </section>
-  <section style="grid-column: 1 / -1">
-    <h2>Log</h2>
-    <div id="log"></div>
+
+  <!-- ===== spread 2: join ===== -->
+  <form class="spread" data-name="join" id="joinForm" aria-label="Join a lobby" autocomplete="off">
+    <div class="page-wrap left"><div class="page">
+      <p class="small">Case file</p>
+      <h2>Who's going in?</h2>
+      <div class="spacer"></div>
+      <label class="field"><span>Lobby code</span>
+        <input id="lobby" maxlength="8" placeholder="K7M2Q" autocapitalize="characters" spellcheck="false" required></label>
+      <label class="field"><span>Your name</span>
+        <input id="name" maxlength="24" placeholder="unnamed intern" spellcheck="false"></label>
+      <label class="field"><span>PIN</span>
+        <input id="pin" maxlength="12" placeholder="from the host" autocapitalize="characters" spellcheck="false"></label>
+      <p class="small">The host's console prints the lobby code and the PINs. Coming back after a reload? Leave the PIN blank and you'll pick up where you left off.</p>
+      <p id="joinNote" class="hand red note" aria-live="polite"></p>
+      <p class="folio">— 1 —</p>
+    </div></div>
+    <div class="page-wrap right"><div class="page">
+      <fieldset class="roles">
+        <legend><h2>Choose your part</h2></legend>
+
+        <input class="sr-only" type="radio" name="role" id="role-intern" value="intern" checked>
+        <label class="card" for="role-intern">
+          <strong>The Intern<svg class="circle" viewBox="0 0 170 44" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M18 26 C 14 8, 120 2, 152 14 C 172 22, 150 40, 92 41 C 40 42, 6 36, 12 20 C 16 10, 40 6, 60 6"/></svg></strong>
+          <span>Unpaid. Stuck in the truck. Watch everyone's sanity, the sensors and the cameras, and tell them what you see.</span>
+        </label>
+
+        <input class="sr-only" type="radio" name="role" id="role-ghost" value="ghost">
+        <label class="card ghost" for="role-ghost">
+          <strong>The Ghost<svg class="circle" viewBox="0 0 170 44" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M18 26 C 14 8, 120 2, 152 14 C 172 22, 150 40, 92 41 C 40 42, 6 36, 12 20 C 16 10, 40 6, 60 6"/></svg></strong>
+          <span>You are what they're hunting. You can barely see them, and they can't see you at all. Not until you want them to.</span>
+          <span class="red">Read the warning. Seriously.</span>
+        </label>
+
+        <input class="sr-only" type="radio" name="role" id="role-admin" value="admin">
+        <label class="card" for="role-admin">
+          <strong>The Host<svg class="circle" viewBox="0 0 170 44" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M18 26 C 14 8, 120 2, 152 14 C 172 22, 150 40, 92 41 C 40 42, 6 36, 12 20 C 16 10, 40 6, 60 6"/></svg></strong>
+          <span>Runs the game. Sees everything. Keep this PIN to yourself.</span>
+        </label>
+      </fieldset>
+      <button class="stamp" type="submit" id="begin">Begin investigation</button>
+      <p class="folio">— 2 —</p>
+    </div></div>
+  </form>
+
+  <!-- ===== spread 3: console ===== -->
+  <section class="spread" data-name="console" aria-label="Investigation">
+    <div class="page-wrap left"><div class="page">
+      <p class="small" id="caseLine">Case №</p>
+      <h2 id="roleTitle">The Intern</h2>
+      <p class="hand" id="phaseLine" aria-live="polite">Waiting for the house to answer…</p>
+
+      <div class="section" data-roles="ghost admin">
+        <h3>What will you do?</h3>
+        <div id="ghostEvents" class="words"></div>
+        <p id="cooldownLine" class="small"></p>
+        <div class="row">
+          <button id="huntBtn" class="stamp" type="button">Hunt</button>
+          <button id="stopHuntBtn" class="ink-btn" type="button" data-roles="admin">call it off</button>
+        </div>
+      </div>
+
+      <div class="section" data-roles="intern admin">
+        <h3>Cameras</h3>
+        <div id="camList" class="words"><span class="small">No cameras yet.</span></div>
+        <figure class="polaroid">
+          <img id="camImg" alt="">
+          <figcaption id="camCaption">no camera selected</figcaption>
+        </figure>
+      </div>
+
+      <div class="section" data-roles="admin">
+        <h3>The host's privileges</h3>
+        <div class="row">
+          <span>set sanity of actor</span>
+          <input id="actor" class="inline-input" type="number" aria-label="Actor number">
+          <span>to</span>
+          <input id="sanity" class="inline-input" type="number" min="0" max="100" value="50" aria-label="Sanity value">
+          <button id="sanityBtn" class="ink-btn" type="button">do it</button>
+        </div>
+        <div class="row">
+          <span>remove session</span>
+          <input id="kickToken" class="inline-input" style="width: 7em" aria-label="Session token prefix" placeholder="token">
+          <button id="kickBtn" class="ink-btn" type="button">kick</button>
+        </div>
+      </div>
+
+      <button id="leave" class="ink-btn" type="button">close the journal</button>
+      <p class="folio">— 3 —</p>
+    </div></div>
+    <div class="page-wrap right"><div class="page ruled">
+      <h3>Log</h3>
+      <ol id="log" class="log" aria-live="polite"></ol>
+      <div class="spacer"></div>
+      <h3>Field notes</h3>
+      <pre id="view" class="notes">(nothing yet)</pre>
+      <p class="folio">— 4 —</p>
+    </div></div>
   </section>
 </main>
+
+<div class="mist over"></div>
+
 <script>
 const $ = (id) => document.getElementById(id);
-const GHOST_EVENTS = ["door", "throw", "light", "flicker", "fusebox", "knock", "window_knock", "car_alarm", "appear", "interact", "ability", "random", "whisper"];
-for (const k of GHOST_EVENTS) $("ghostKind").add(new Option(k));
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+const narrow = matchMedia("(max-width: 780px)");
 
-let ws, token, reqSeq = 0, camUrl;
+const GHOST_EVENTS = [
+  ["door", "slam a door"], ["throw", "throw something"], ["light", "the lights"], ["flicker", "flicker"],
+  ["fusebox", "the fuse box"], ["knock", "knock"], ["window_knock", "rap on a window"], ["car_alarm", "car alarm"],
+  ["appear", "appear"], ["interact", "touch something"], ["whisper", "whisper"], ["ability", "use your gift"], ["random", "anything"],
+];
+const ROLE_TITLES = { intern: "The Intern", ghost: "The Ghost", admin: "The Host" };
+
+let ws, token, role, lobbyCode, reqSeq = 0, camUrl, watching = null, camsKey = "";
+const pending = new Map();
 const store = (() => { try { return window.sessionStorage; } catch { return null; } })();
-try { const saved = JSON.parse(store?.getItem("dol") ?? "{}"); for (const k of ["lobby", "role", "name"]) if (saved[k]) $(k).value = saved[k]; } catch {}
+const get = (k) => { try { return store?.getItem(k); } catch { return null; } };
+const set = (k, v) => { try { v == null ? store?.removeItem(k) : store?.setItem(k, v); } catch {} };
 
-function log(text, cls) {
-  const div = document.createElement("div");
-  div.textContent = `${new Date().toLocaleTimeString()}  ${text}`;
-  if (cls) div.className = cls;
-  $("log").prepend(div);
-  while ($("log").childElementCount > 200) $("log").lastChild.remove();
+// ---------- paper ----------
+function torn(side) {
+  const r = (a) => Math.random() * a;
+  const pts = [[0, 0]];
+  for (let x = 4; x < 100; x += 4) pts.push([x, r(0.6)]);
+  // Small fibrous jitter, plus the occasional tear that bites in and eases back out over a few points.
+  let tear = 0;
+  for (let y = 0; y <= 100; y += 1.2) {
+    if (tear < 0.3 && Math.random() < 0.05) tear = 1.4 + r(2);
+    pts.push([100 - (r(0.7) + tear), y]);
+    tear *= 0.55;
+  }
+  for (let x = 96; x > 0; x -= 4) pts.push([x, 100 - r(0.6)]);
+  pts.push([0, 100]);
+  const p = side === "left" ? pts.map(([x, y]) => [100 - x, y]) : pts;
+  return `polygon(${p.map(([x, y]) => `${x.toFixed(2)}% ${y.toFixed(2)}%`).join(",")})`;
+}
+document.querySelectorAll(".page").forEach((page) =>
+  page.style.setProperty("--torn", torn(page.closest(".left") ? "left" : "right")));
+document.querySelector(".leaf").style.setProperty("--torn", torn("right"));
+
+let current = "warning";
+function turnTo(name) {
+  if (name === current) return;
+  const book = $("book");
+  const swap = () => {
+    current = name;
+    book.dataset.spread = name;
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
+  if (reduceMotion.matches || narrow.matches) return swap();
+  book.classList.remove("turning");
+  void book.offsetWidth;
+  book.classList.add("turning");
+  setTimeout(swap, 430);
+  setTimeout(() => book.classList.remove("turning"), 920);
 }
 
+// ---------- log ----------
+function log(text, cls) {
+  const li = document.createElement("li");
+  if (cls) li.className = cls;
+  const time = document.createElement("time");
+  time.textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const span = document.createElement("span");
+  span.textContent = text;
+  li.append(time, span);
+  $("log").prepend(li);
+  while ($("log").childElementCount > 150) $("log").lastChild.remove();
+}
+
+function describe(d) {
+  const where = d.room ? ` in ${d.room}` : "";
+  switch (d.kind) {
+    case "motion": return ["Motion sensor tripped" + where];
+    case "paranormal_sound": return [({ footstep: "Footsteps", throw: "Something thrown", whisper: "A whisper" }[d.sound] ?? "A sound") + where];
+    case "emf": return ["EMF spike" + where];
+    case "hunt": return d.active ? ["IT'S HUNTING", "blood"] : ["The hunt is over"];
+    case "player_died": return ["Someone didn't make it" + where, "blood"];
+    case "player_charging": return [`They're coming for you. ${d.distance} m`, "blood"];
+    default: return [JSON.stringify(d), "faint"];
+  }
+}
+
+function setStatus(text) { $("status").textContent = text; }
+
+// ---------- connection ----------
 function connect() {
-  ws?.close();
+  ws?.close(1000);
+  setStatus("knocking…");
   ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/play`);
   ws.binaryType = "arraybuffer";
+
   ws.onopen = () => {
-    $("status").textContent = "connected";
-    const savedToken = store?.getItem("dolToken");
-    if (savedToken && store?.getItem("dolLobby") === $("lobby").value.trim().toUpperCase()) {
-      ws.send(JSON.stringify({ t: "resume", lobby: $("lobby").value, token: savedToken }));
+    const lobby = $("lobby").value.trim().toUpperCase();
+    const saved = get("dolToken");
+    if (!$("pin").value.trim() && saved && get("dolLobby") === lobby) {
+      ws.send(JSON.stringify({ t: "resume", lobby, token: saved }));
     } else {
-      ws.send(JSON.stringify({ t: "join", lobby: $("lobby").value, role: $("role").value, pin: $("pin").value, name: $("name").value }));
+      ws.send(JSON.stringify({ t: "join", lobby, role: selectedRole(), pin: $("pin").value.trim(), name: $("name").value.trim() }));
     }
   };
-  ws.onclose = (e) => { $("status").textContent = `closed ${e.code} ${e.reason}`; };
+
+  ws.onclose = (e) => {
+    setStatus("not connected");
+    if (e.code === 1000) return;
+    if (e.code === 4001) { forget(); $("joinNote").textContent = "The host took your journal away."; turnTo("join"); return; }
+    if (current === "console") log(`Lost the connection${e.reason ? ` (${e.reason})` : ""}.`, "faint");
+    else $("joinNote").textContent = e.reason || "Couldn't reach the house.";
+  };
+
   ws.onmessage = (e) => {
     if (typeof e.data !== "string") return onFrame(new Uint8Array(e.data));
     const msg = JSON.parse(e.data);
     switch (msg.t) {
-      case "joined":
-        token = msg.token;
-        store?.setItem("dolToken", msg.token); store?.setItem("dolLobby", msg.lobby);
-        $("status").textContent = `${msg.role} in ${msg.lobby}`;
-        log(`joined as ${msg.role} (${msg.name})`, "ok");
-        break;
+      case "joined": onJoined(msg); break;
       case "join.failed":
-        store?.removeItem("dolToken");
-        log(`join failed: ${msg.error}`, "err");
+        forget();
+        $("joinNote").textContent = msg.error;
+        turnTo("join");
         break;
-      case "view": $("view").textContent = JSON.stringify(msg.data, null, 2); break;
-      case "event": log(`event ${JSON.stringify(msg.data)}`); break;
-      case "cmd.result": log(`${msg.reqId} ${msg.ok ? "ok" : "failed: " + msg.error}${msg.data ? " " + JSON.stringify(msg.data) : ""}`, msg.ok ? "ok" : "err"); break;
-      default: log(JSON.stringify(msg));
+      case "view": onView(msg.data); break;
+      case "event": { const [text, cls] = describe(msg.data); log(text, cls); break; }
+      case "cmd.result": onResult(msg); break;
+      case "host.offline": setStatus("host offline"); log("The host went quiet.", "faint"); break;
+      case "host.online": setStatus(`${role ?? "connected"} · ${lobbyCode ?? ""}`); log("The host is back.", "faint"); break;
     }
   };
 }
 
+function selectedRole() { return document.querySelector('input[name="role"]:checked')?.value ?? "intern"; }
+function forget() { token = null; set("dolToken", null); }
+
+function onJoined(msg) {
+  token = msg.token; role = msg.role; lobbyCode = msg.lobby;
+  set("dolToken", token); set("dolLobby", lobbyCode);
+  $("joinNote").textContent = "";
+  $("pin").value = "";
+  setStatus(`${role} · ${lobbyCode}`);
+  $("caseLine").textContent = `Case № ${lobbyCode}`;
+  $("roleTitle").textContent = ROLE_TITLES[role] ?? role;
+  document.querySelectorAll("[data-roles]").forEach((el) => { el.hidden = !el.dataset.roles.split(" ").includes(role); });
+  $("log").replaceChildren();
+  $("view").textContent = "(nothing yet)";
+  watching = null; camsKey = "";
+  log(`Signed in as ${msg.name}.`, "faint");
+  turnTo("console");
+}
+
+function onView(d) {
+  $("view").textContent = JSON.stringify(d, null, 2);
+  if (d.phase === "waiting") { $("phaseLine").textContent = d.reason; return; }
+
+  if (role === "ghost") {
+    $("phaseLine").textContent = d.hunting ? "You are hunting." : `${d.blips?.length ?? 0} of them nearby. They can't see you.`;
+  } else if (role === "intern") {
+    $("phaseLine").textContent = `Average sanity ${d.averageSanity}%`;
+  } else if (d.ghost) {
+    $("phaseLine").textContent = `${d.ghost.type ?? "?"}, ${d.ghost.state ?? "?"}, in ${d.ghost.room ?? "?"}`;
+  }
+
+  const cd = d.cooldowns;
+  const eventWait = cd?.event ?? 0, huntWait = cd?.hunt ?? 0;
+  document.querySelectorAll("#ghostEvents button").forEach((b) => { b.disabled = eventWait > 0; });
+  $("huntBtn").disabled = huntWait !== 0;
+  $("huntBtn").textContent = huntWait === -1 ? "Hunting forbidden" : "Hunt";
+  $("cooldownLine").textContent = eventWait > 0 ? `The house needs ${eventWait}s to settle.` : huntWait > 0 ? `You can hunt again in ${huntWait}s.` : "";
+
+  renderCameras(d.cameras);
+}
+
+function renderCameras(cameras) {
+  const list = Array.isArray(cameras) ? cameras
+    : typeof cameras === "number" ? Array.from({ length: cameras }, (_, index) => ({ index })) : null;
+  if (!list) return;
+  const key = JSON.stringify(list) + watching;
+  if (key === camsKey) return;
+  camsKey = key;
+  const box = $("camList");
+  box.replaceChildren();
+  if (!list.length) { box.innerHTML = '<span class="small">No cameras yet.</span>'; return; }
+  for (const cam of list) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "ink-btn" + (cam.index === watching ? " on" : "");
+    b.textContent = `cam ${cam.index + 1}${cam.room ? `, ${cam.room}` : ""}`;
+    b.onclick = () => {
+      const next = watching === cam.index ? null : cam.index;
+      cmd("cctv.watch", { index: next }, next == null ? "stopped watching" : `watching ${b.textContent}`);
+      watching = next;
+      $("camCaption").textContent = next == null ? "no camera selected" : b.textContent;
+      if (next == null) $("camImg").removeAttribute("src");
+      camsKey = "";
+      renderCameras(list);
+    };
+    box.append(b);
+  }
+}
+
 function onFrame(bytes) {
-  if (bytes[0] !== 0x01) return;
+  if (bytes[0] !== 0x01 || bytes[1] !== watching) return;
   if (camUrl) URL.revokeObjectURL(camUrl);
   camUrl = URL.createObjectURL(new Blob([bytes.subarray(2)], { type: "image/jpeg" }));
   $("camImg").src = camUrl;
-  $("camImg").alt = `camera ${bytes[1]}`;
+  $("camImg").alt = `Camera ${bytes[1] + 1}`;
 }
 
-function cmd(name, args = {}) {
-  if (ws?.readyState !== WebSocket.OPEN) return log("not connected", "err");
+function cmd(name, args = {}, label = name) {
+  if (ws?.readyState !== WebSocket.OPEN) return log("Not connected.", "faint");
   const reqId = `${name}#${++reqSeq}`;
+  pending.set(reqId, label);
   ws.send(JSON.stringify({ t: "cmd", reqId, cmd: name, args }));
 }
 
-$("join").onclick = () => {
-  try { store?.setItem("dol", JSON.stringify({ lobby: $("lobby").value, role: $("role").value, name: $("name").value })); } catch {}
-  if ($("pin").value) store?.removeItem("dolToken");
+function onResult(msg) {
+  const label = pending.get(msg.reqId) ?? msg.reqId;
+  pending.delete(msg.reqId);
+  if (msg.ok) log(`${label}${msg.data?.name ? `: ${msg.data.name}` : ""}.`, "faint");
+  else log(`${label}: ${msg.error}`, "blood");
+}
+
+// ---------- wiring ----------
+for (const [kind, words] of GHOST_EVENTS) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "ink-btn"; b.textContent = words;
+  b.onclick = () => cmd("ghost.event", { kind }, words);
+  $("ghostEvents").append(b);
+}
+$("huntBtn").onclick = () => cmd("ghost.hunt", {}, "hunt");
+$("stopHuntBtn").onclick = () => cmd("ghost.stop_hunt", {}, "called off the hunt");
+$("sanityBtn").onclick = () => cmd("sanity.set", { actor: Number($("actor").value), value: Number($("sanity").value) }, "set sanity");
+$("kickBtn").onclick = () => cmd("session.kick", { token: $("kickToken").value.trim() }, "kicked");
+$("leave").onclick = () => { ws?.close(1000); forget(); role = null; setStatus("not connected"); turnTo("join"); };
+
+$("ack").onclick = () => { turnTo("join"); setTimeout(() => $("lobby").focus({ preventScroll: true }), 950); };
+
+$("joinForm").onsubmit = (e) => {
+  e.preventDefault();
+  $("lobby").value = $("lobby").value.trim().toUpperCase();
+  $("joinNote").textContent = "";
+  set("dol", JSON.stringify({ lobby: $("lobby").value, role: selectedRole(), name: $("name").value }));
   connect();
 };
-$("unwatch").onclick = () => cmd("cctv.watch", { index: null });
-document.querySelectorAll("[data-cmd]").forEach((b) => b.onclick = () => {
-  const c = b.dataset.cmd;
-  cmd(c, {
-    "ghost.event": { kind: $("ghostKind").value },
-    "cctv.watch": { index: Number($("camIndex").value) },
-    "sanity.set": { actor: Number($("actor").value), value: Number($("sanity").value) },
-    "session.kick": { token: $("kickToken").value.trim() },
-  }[c] ?? {});
-});
+
+try {
+  const saved = JSON.parse(get("dol") ?? "{}");
+  if (saved.lobby) $("lobby").value = saved.lobby;
+  if (saved.name) $("name").value = saved.name;
+  if (saved.role) { const r = document.getElementById(`role-${saved.role}`); if (r) r.checked = true; }
+} catch {}
 </script>
 </body>
 </html>

@@ -1,5 +1,7 @@
 # Dolophobia
 
+## This mod was discontinued after finding out the Kinetic Games has no interest in allowing fun outside their curated experience. BepInEx causes the game to force-crash like malware when it detects GDB.
+
 A friend-group shenanigans mod for Phasmophobia. The lobby host runs a BepInEx mod that streams
 the host's authoritative game state to a web app, where friends without the game play as:
 

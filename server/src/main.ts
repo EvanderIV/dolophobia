@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { startRelay } from "./relay.ts";
 
-const port = Number(process.env.PORT ?? 8787);
+const port = Number(process.env.PORT ?? 4787);
 const host = process.env.HOST || undefined;
 const hostSecret = process.env.RELAY_HOST_SECRET || undefined;
 const publicDir = process.env.PUBLIC_DIR ?? fileURLToPath(new URL("../public", import.meta.url));

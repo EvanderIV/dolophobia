@@ -28,7 +28,7 @@ internal sealed class ModConfig
 
     public ModConfig(ConfigFile cfg)
     {
-        RelayUrl = cfg.Bind("Relay", "Url", "ws://localhost:8787/host",
+        RelayUrl = cfg.Bind("Relay", "Url", "ws://localhost:4787/host",
             "WebSocket URL of the Dolophobia relay's /host endpoint.");
         RelaySecret = cfg.Bind("Relay", "Secret", "",
             "Must match RELAY_HOST_SECRET on the relay, if the relay sets one.");

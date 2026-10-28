@@ -15,6 +15,8 @@ const ROLES: readonly Role[] = ["ghost", "intern", "admin"];
 
 export interface RelayOptions {
   port: number;
+  /** Interface to bind. Use 127.0.0.1 behind a reverse proxy so the raw port isn't reachable from outside. */
+  host?: string;
   /** If set, the host mod must present this in host.hello (Relay.Secret in the mod config). */
   hostSecret?: string;
   /** Directory served over HTTP (the dev console / web app). */
@@ -286,7 +288,7 @@ export function startRelay(opts: RelayOptions): Promise<{ server: Server; port: 
   }
 
   return new Promise((resolve) => {
-    server.listen(opts.port, () => {
+    server.listen(opts.port, opts.host, () => {
       const address = server.address();
       const port = typeof address === "object" && address ? address.port : opts.port;
       resolve({

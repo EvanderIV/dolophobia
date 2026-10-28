@@ -20,7 +20,7 @@ public class Plugin : BasePlugin
         Logger = Log;
         Settings = new ModConfig(Config);
 
-        Harmony.CreateAndPatchAll(typeof(Patches), Guid);
+        Harmony.CreateAndPatchAll(typeof(GamePatches), Guid);
         AddComponent<DolophobiaBehaviour>();
 
         Logger.LogInfo($"Dolophobia {Version} loaded. Relay: {Settings.RelayUrl.Value}");

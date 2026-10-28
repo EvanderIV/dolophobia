@@ -30,7 +30,7 @@ internal sealed class World
     LevelRoom[] _rooms = System.Array.Empty<LevelRoom>();
     float _nextRescan;
 
-    /// <summary>Actors whose death RPC fired this level (set by <see cref="Patches"/>).</summary>
+    /// <summary>Actors whose death RPC fired this level (set by <see cref="GamePatches"/>).</summary>
     public static readonly HashSet<int> DeadActors = new();
 
     public bool InLevel => Ghost != null;

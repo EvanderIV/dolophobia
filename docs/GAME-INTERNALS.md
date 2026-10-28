@@ -18,7 +18,7 @@ Notes on how the mod reaches into Phasmophobia, written against the build instal
 
 ## How the mod copes
 
-1. **Only patch readable names.** All Harmony targets in [Patches.cs](../mod/src/Game/Patches.cs) are public
+1. **Only patch readable names.** All Harmony targets in [GamePatches.cs](../mod/src/Game/GamePatches.cs) are public
    methods or `[PunRPC]`s. Parameters are bound positionally (`__0`, `__1`), never by obfuscated names.
 2. **Resolve obfuscated fields by shape at runtime** ([Obf.cs](../mod/src/Game/Obf.cs), [Shapes.cs](../mod/src/Game/Shapes.cs)).
    For example "the only field on `Player` whose type is `PlayerSanity`", or "the enum field on `GhostAI` containing the value `hunting`".

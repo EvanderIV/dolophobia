@@ -25,7 +25,7 @@ the ghost's fuzzed radar is fuzzed on the host and the exact positions never rea
 | Path | What |
 | --- | --- |
 | [mod/](mod/) | BepInEx 6 (IL2CPP) plugin, C# / .NET 6 |
-| [server/](server/) | Relay + dev console (`/`), Node 24, no build step |
+| [dolophobia-server/](dolophobia-server/) | Relay + dev console (`/`), Node 24, no build step |
 | [docs/PROTOCOL.md](docs/PROTOCOL.md) | Wire protocol, roles and commands |
 | [docs/GAME-INTERNALS.md](docs/GAME-INTERNALS.md) | What the mod hooks, how obfuscation is handled, what to re-check after game updates |
 | [tools/](tools/) | Cpp2IL dump + type inspection scripts |
@@ -44,7 +44,7 @@ the ghost's fuzzed radar is fuzzed on the host and the exact positions never rea
    ```
 5. Run the relay:
    ```powershell
-   cd server; npm install; npm start          # http://localhost:8787
+   cd dolophobia-server; npm install; npm start          # http://localhost:8787
    ```
 6. Launch the game. The BepInEx console prints the lobby code and the Ghost / Intern / Admin PINs.
    Open `http://localhost:8787`, enter the lobby + Admin PIN, and you should see the admin view.
@@ -55,7 +55,7 @@ The relay has to be reachable from their browsers. Pick one:
 
 - **Quick:** keep it on your PC and expose it with a tunnel, e.g. `cloudflared tunnel --url http://localhost:8787`.
   Leave the mod's `Relay.Url` on `ws://localhost:8787/host`. Friends open the tunnel URL.
-- **Proper:** deploy `server/` anywhere that runs Node 24 and WebSockets (Fly.io, Render, a VPS).
+- **Proper:** deploy `dolophobia-server/` anywhere that runs Node 24 and WebSockets (Fly.io, Render, a VPS).
   Set `RELAY_HOST_SECRET` there, then set `Relay.Url = wss://<host>/host` and `Relay.Secret` in
   `BepInEx/config/dev.dolophobia.mod.cfg`.
 
@@ -76,9 +76,9 @@ for local dev, but set it on anything public.
 
 | Piece | State |
 | --- | --- |
-| Relay: lobbies, PIN auth handoff, role routing, reconnect/resume, kick, camera fan-out | Working, tested (`cd server; npm test`) |
+| Relay: lobbies, PIN auth handoff, role routing, reconnect/resume, kick, camera fan-out | Working, tested (`cd dolophobia-server; npm test`) |
 | Mod: relay client, sessions/PINs/permissions/rate-limit/cooldowns | Written, **not yet compiled** (needs interop from step 2) |
 | Mod: state (sanity, rooms, ghost type/state/room, positions), events, ghost commands, CCTV | Written against the real game dump, **needs in-game verification**, see the checklist in GAME-INTERNALS |
 | Changing *other* players' sanity | Needs the mod on their client too (sanity is owner-authoritative). Planned. |
 | Voice: intern comms, ghost talk box | Not started. Plan in GAME-INTERNALS. |
-| The actual web app (ghost radar, intern truck, epilepsy warning) | Not started. `server/public/index.html` is a protocol dev console only. |
+| The actual web app (ghost radar, intern truck, epilepsy warning) | Not started. `dolophobia-server/public/index.html` is a protocol dev console only. |

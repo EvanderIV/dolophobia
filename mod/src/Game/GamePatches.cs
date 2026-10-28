@@ -12,7 +12,7 @@ namespace Dolophobia.Game;
 /// Every hook is wrapped so a game update can never turn into an exception inside game code.
 /// </summary>
 [HarmonyPatch]
-internal static class Patches
+internal static class GamePatches
 {
     // Truck motion-sensor log. Fires on every client when any placed sensor trips.
     [HarmonyPostfix, HarmonyPatch(typeof(MotionSensorData), nameof(MotionSensorData.Detected))]

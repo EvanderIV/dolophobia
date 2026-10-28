@@ -1,0 +1,17 @@
+# .NET
+bin/
+obj/
+*.user
+
+# Node
+node_modules/
+
+# Local tooling caches (Cpp2IL binary + game dumps; dumps are derived from game files, don't commit them)
+tools/.cache/
+
+# Editors / OS
+.vs/
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

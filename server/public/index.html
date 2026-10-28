@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dolophobia Dev Console</title>
+<style>
+  :root { --bg: #0e0f12; --panel: #17191e; --line: #2a2d35; --text: #d8dbe2; --dim: #8a8f9c; --accent: #c9433b; --ok: #4fae7a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 ui-monospace, Consolas, monospace; }
+  header { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  header strong { margin-right: 8px; }
+  input, select, button { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; font: inherit; }
+  button { cursor: pointer; } button:hover { border-color: var(--dim); }
+  #status { color: var(--dim); margin-left: auto; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 12px 16px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px; min-width: 0; }
+  h2 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); }
+  pre { margin: 0; white-space: pre-wrap; word-break: break-word; max-height: 50vh; overflow: auto; }
+  #log div { border-bottom: 1px solid var(--line); padding: 2px 0; }
+  .err { color: var(--accent); } .ok { color: var(--ok); }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  #cams img { width: 100%; max-width: 320px; image-rendering: pixelated; border: 1px solid var(--line); }
+  @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <strong>Dolophobia dev console</strong>
+  <input id="lobby" placeholder="Lobby" size="7" autocomplete="off">
+  <select id="role"><option>intern</option><option>ghost</option><option>admin</option></select>
+  <input id="pin" placeholder="PIN" size="7" autocomplete="off">
+  <input id="name" placeholder="Name" size="10">
+  <button id="join">Join</button>
+  <span id="status">disconnected</span>
+</header>
+<main>
+  <section>
+    <h2>Commands</h2>
+    <div class="row">
+      <select id="ghostKind"></select>
+      <button data-cmd="ghost.event">ghost.event</button>
+      <button data-cmd="ghost.hunt">ghost.hunt</button>
+      <button data-cmd="ghost.stop_hunt">ghost.stop_hunt</button>
+    </div>
+    <div class="row">
+      <input id="camIndex" type="number" min="0" value="0" style="width:5em">
+      <button data-cmd="cctv.watch">cctv.watch</button>
+      <button id="unwatch">stop watching</button>
+    </div>
+    <div class="row">
+      <input id="actor" type="number" placeholder="actor" style="width:6em">
+      <input id="sanity" type="number" min="0" max="100" value="50" style="width:5em">
+      <button data-cmd="sanity.set">sanity.set</button>
+    </div>
+    <div class="row">
+      <input id="kickToken" placeholder="token prefix (8)" size="12">
+      <button data-cmd="session.kick">session.kick</button>
+    </div>
+    <h2>Camera</h2>
+    <div id="cams"><img id="camImg" alt="No camera frames yet"></div>
+  </section>
+  <section>
+    <h2>View</h2>
+    <pre id="view">(join to receive)</pre>
+  </section>
+  <section style="grid-column: 1 / -1">
+    <h2>Log</h2>
+    <div id="log"></div>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const GHOST_EVENTS = ["door", "throw", "light", "flicker", "fusebox", "knock", "window_knock", "car_alarm", "appear", "interact", "ability", "random", "whisper"];
+for (const k of GHOST_EVENTS) $("ghostKind").add(new Option(k));
+
+let ws, token, reqSeq = 0, camUrl;
+const store = (() => { try { return window.sessionStorage; } catch { return null; } })();
+try { const saved = JSON.parse(store?.getItem("dol") ?? "{}"); for (const k of ["lobby", "role", "name"]) if (saved[k]) $(k).value = saved[k]; } catch {}
+
+function log(text, cls) {
+  const div = document.createElement("div");
+  div.textContent = `${new Date().toLocaleTimeString()}  ${text}`;
+  if (cls) div.className = cls;
+  $("log").prepend(div);
+  while ($("log").childElementCount > 200) $("log").lastChild.remove();
+}
+
+function connect() {
+  ws?.close();
+  ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/play`);
+  ws.binaryType = "arraybuffer";
+  ws.onopen = () => {
+    $("status").textContent = "connected";
+    const savedToken = store?.getItem("dolToken");
+    if (savedToken && store?.getItem("dolLobby") === $("lobby").value.trim().toUpperCase()) {
+      ws.send(JSON.stringify({ t: "resume", lobby: $("lobby").value, token: savedToken }));
+    } else {
+      ws.send(JSON.stringify({ t: "join", lobby: $("lobby").value, role: $("role").value, pin: $("pin").value, name: $("name").value }));
+    }
+  };
+  ws.onclose = (e) => { $("status").textContent = `closed ${e.code} ${e.reason}`; };
+  ws.onmessage = (e) => {
+    if (typeof e.data !== "string") return onFrame(new Uint8Array(e.data));
+    const msg = JSON.parse(e.data);
+    switch (msg.t) {
+      case "joined":
+        token = msg.token;
+        store?.setItem("dolToken", msg.token); store?.setItem("dolLobby", msg.lobby);
+        $("status").textContent = `${msg.role} in ${msg.lobby}`;
+        log(`joined as ${msg.role} (${msg.name})`, "ok");
+        break;
+      case "join.failed":
+        store?.removeItem("dolToken");
+        log(`join failed: ${msg.error}`, "err");
+        break;
+      case "view": $("view").textContent = JSON.stringify(msg.data, null, 2); break;
+      case "event": log(`event ${JSON.stringify(msg.data)}`); break;
+      case "cmd.result": log(`${msg.reqId} ${msg.ok ? "ok" : "failed: " + msg.error}${msg.data ? " " + JSON.stringify(msg.data) : ""}`, msg.ok ? "ok" : "err"); break;
+      default: log(JSON.stringify(msg));
+    }
+  };
+}
+
+function onFrame(bytes) {
+  if (bytes[0] !== 0x01) return;
+  if (camUrl) URL.revokeObjectURL(camUrl);
+  camUrl = URL.createObjectURL(new Blob([bytes.subarray(2)], { type: "image/jpeg" }));
+  $("camImg").src = camUrl;
+  $("camImg").alt = `camera ${bytes[1]}`;
+}
+
+function cmd(name, args = {}) {
+  if (ws?.readyState !== WebSocket.OPEN) return log("not connected", "err");
+  const reqId = `${name}#${++reqSeq}`;
+  ws.send(JSON.stringify({ t: "cmd", reqId, cmd: name, args }));
+}
+
+$("join").onclick = () => {
+  try { store?.setItem("dol", JSON.stringify({ lobby: $("lobby").value, role: $("role").value, name: $("name").value })); } catch {}
+  if ($("pin").value) store?.removeItem("dolToken");
+  connect();
+};
+$("unwatch").onclick = () => cmd("cctv.watch", { index: null });
+document.querySelectorAll("[data-cmd]").forEach((b) => b.onclick = () => {
+  const c = b.dataset.cmd;
+  cmd(c, {
+    "ghost.event": { kind: $("ghostKind").value },
+    "cctv.watch": { index: Number($("camIndex").value) },
+    "sanity.set": { actor: Number($("actor").value), value: Number($("sanity").value) },
+    "session.kick": { token: $("kickToken").value.trim() },
+  }[c] ?? {});
+});
+</script>
+</body>
+</html>

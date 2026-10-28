@@ -1,0 +1,21 @@
+{
+  "name": "dolophobia-relay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Relays the Dolophobia host mod's game state to web players and their commands back.",
+  "engines": {
+    "node": ">=23.6"
+  },
+  "scripts": {
+    "start": "node src/main.ts",
+    "test": "node --test \"test/**/*.test.ts\""
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/ws": "^8.5.12"
+  }
+}

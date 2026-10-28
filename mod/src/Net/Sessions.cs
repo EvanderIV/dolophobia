@@ -74,11 +74,15 @@ internal sealed class Sessions
             throw new AuthException("Too many wrong PINs.");
 
         if (!Enum.TryParse<Role>(roleName, true, out var role)) throw new AuthException($"Unknown role '{roleName}'.");
-        var expected = role switch { Role.Ghost => GhostPin, Role.Intern => InternPin, _ => AdminPin };
-        if (!PinMatches(expected, pin))
+        if (PinRequired(role))
         {
-            _pinFailures[conn] = failures + 1;
-            throw new AuthException("Wrong PIN.");
+            if (string.IsNullOrWhiteSpace(pin)) throw new AuthException("That role needs a PIN.");
+            var expected = role switch { Role.Ghost => GhostPin, Role.Intern => InternPin, _ => AdminPin };
+            if (!PinMatches(expected, pin))
+            {
+                _pinFailures[conn] = failures + 1;
+                throw new AuthException("Wrong PIN.");
+            }
         }
 
         if (role == Role.Ghost && AnyConnected(Role.Ghost)) throw new AuthException("Someone is already haunting this house.");
@@ -95,6 +99,12 @@ internal sealed class Sessions
         _byToken[session.Token] = session;
         return session;
     }
+
+    /// <summary>
+    /// Admin sees the ghost's answers and can kick people, so it's always PIN-gated. Ghost/Intern only
+    /// need the lobby code unless the host opts in, as in Phasmophobia's own room codes.
+    /// </summary>
+    public static bool PinRequired(Role role) => role == Role.Admin || Plugin.Settings.RequireRolePins.Value;
 
     static bool PinMatches(string expected, string given) =>
         given != null && CryptographicOperations.FixedTimeEquals(

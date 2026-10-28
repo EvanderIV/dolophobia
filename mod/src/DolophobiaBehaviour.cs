@@ -92,10 +92,12 @@ public class DolophobiaBehaviour : MonoBehaviour
         switch ((string)msg["t"])
         {
             case "host.welcome":
+                var rolePins = Sessions.PinRequired(Role.Ghost)
+                    ? $"  Ghost PIN:  {_sessions.GhostPin}\n  Intern PIN: {_sessions.InternPin}\n"
+                    : "  Ghost & Intern: just the lobby code\n";
                 Plugin.Logger.LogMessage(
                     $"\n========== Dolophobia lobby {msg["lobby"]} ==========\n" +
-                    $"  Ghost PIN:  {_sessions.GhostPin}\n" +
-                    $"  Intern PIN: {_sessions.InternPin}\n" +
+                    rolePins +
                     $"  Admin PIN:  {_sessions.AdminPin}   (keep this one to yourself)\n" +
                     "=================================================");
                 break;

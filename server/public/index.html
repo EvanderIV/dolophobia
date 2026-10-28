@@ -299,9 +299,9 @@
         <input id="lobby" maxlength="8" placeholder="K7M2Q" autocapitalize="characters" spellcheck="false" required></label>
       <label class="field"><span>Your name</span>
         <input id="name" maxlength="24" placeholder="unnamed intern" spellcheck="false"></label>
-      <label class="field"><span>PIN</span>
-        <input id="pin" maxlength="12" placeholder="from the host" autocapitalize="characters" spellcheck="false"></label>
-      <p class="small">The host's console prints the lobby code and the PINs. Coming back after a reload? Leave the PIN blank and you'll pick up where you left off.</p>
+      <label class="field" id="pinField" hidden><span>Host PIN</span>
+        <input id="pin" maxlength="12" placeholder="from your console" autocapitalize="characters" spellcheck="false"></label>
+      <p class="small">Ask the host for the lobby code. Coming back after a reload? Just press the stamp again and you'll pick up where you left off.</p>
       <p id="joinNote" class="hand red note" aria-live="polite"></p>
       <p class="folio">— 1 —</p>
     </div></div>
@@ -508,6 +508,7 @@ function connect() {
       case "join.failed":
         forget();
         $("joinNote").textContent = msg.error;
+        if (/PIN/.test(msg.error)) { pinsRequired = true; syncPinField(); $("pin").focus({ preventScroll: true }); }
         turnTo("join");
         break;
       case "view": onView(msg.data); break;
@@ -520,6 +521,15 @@ function connect() {
 }
 
 function selectedRole() { return document.querySelector('input[name="role"]:checked')?.value ?? "intern"; }
+
+// Only the Host needs a PIN, unless this lobby's host turned on per-role PINs (we learn that from a rejection).
+let pinsRequired = false;
+function syncPinField() {
+  const admin = selectedRole() === "admin";
+  $("pinField").hidden = !(admin || pinsRequired);
+  $("pinField").querySelector("span").textContent = admin ? "Host PIN" : "PIN";
+}
+document.querySelectorAll('input[name="role"]').forEach((r) => r.addEventListener("change", syncPinField));
 function forget() { token = null; set("dolToken", null); }
 
 function onJoined(msg) {
@@ -639,6 +649,7 @@ try {
   if (saved.name) $("name").value = saved.name;
   if (saved.role) { const r = document.getElementById(`role-${saved.role}`); if (r) r.checked = true; }
 } catch {}
+syncPinField();
 </script>
 </body>
 </html>

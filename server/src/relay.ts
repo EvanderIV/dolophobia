@@ -44,6 +44,9 @@ interface Lobby {
 
 const CAMERA_FRAME = 0x01;
 const MAX_JOIN_ATTEMPTS = 8;
+/** Wrong lobby codes allowed per client IP per window, so codes can't be guessed by reconnecting. */
+const MAX_BAD_CODES_PER_IP = 12;
+const BAD_CODE_WINDOW_MS = 10 * 60_000;
 const LOBBY_TTL_MS = 10 * 60_000;
 const CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
@@ -63,6 +66,7 @@ export function startRelay(opts: RelayOptions): Promise<{ server: Server; port: 
   const log = opts.log ?? ((m: string) => console.log(`[relay] ${m}`));
   const lobbiesByCode = new Map<string, Lobby>();
   const lobbiesByHostKey = new Map<string, Lobby>();
+  const badCodes = new Map<string, { count: number; since: number }>();
 
   const server = createServer((req, res) => void serveStatic(req, res, opts.publicDir));
   const hostWss = new WebSocketServer({ noServer: true, maxPayload: 4 * 1024 * 1024 });
@@ -191,7 +195,7 @@ export function startRelay(opts: RelayOptions): Promise<{ server: Server; port: 
   // ---------------- players (browsers) ----------------
 
   playWss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
-    const client: Client = { conn: randomUUID(), ws, ip: req.socket.remoteAddress ?? "?", joinAttempts: 0 };
+    const client: Client = { conn: randomUUID(), ws, ip: clientIp(req), joinAttempts: 0 };
 
     ws.on("message", (raw: RawData, isBinary: boolean) => {
       if (isBinary) return;
@@ -227,9 +231,20 @@ export function startRelay(opts: RelayOptions): Promise<{ server: Server; port: 
   function onJoin(client: Client, msg: Record<string, any>) {
     if (++client.joinAttempts > MAX_JOIN_ATTEMPTS) return client.ws.close(4029, "Too many attempts");
 
+    const now = Date.now();
+    const strikes = badCodes.get(client.ip);
+    if (strikes && now - strikes.since < BAD_CODE_WINDOW_MS && strikes.count >= MAX_BAD_CODES_PER_IP) {
+      send(client.ws, { t: "join.failed", error: "Too many wrong lobby codes. Try again in a few minutes." });
+      return client.ws.close(4029, "Too many attempts");
+    }
+
     const code = String(msg.lobby ?? "").trim().toUpperCase();
     const lobby = lobbiesByCode.get(code);
-    if (!lobby) return send(client.ws, { t: "join.failed", error: "No lobby with that code." });
+    if (!lobby) {
+      if (!strikes || now - strikes.since >= BAD_CODE_WINDOW_MS) badCodes.set(client.ip, { count: 1, since: now });
+      else strikes.count++;
+      return send(client.ws, { t: "join.failed", error: "No lobby with that code." });
+    }
     if (!lobby.host) return send(client.ws, { t: "join.failed", error: "The host is offline." });
 
     if (client.lobby && client.lobby !== lobby) client.lobby.clients.delete(client.conn);
@@ -275,6 +290,7 @@ export function startRelay(opts: RelayOptions): Promise<{ server: Server; port: 
       }
     }
     const now = Date.now();
+    for (const [ip, strikes] of badCodes) if (now - strikes.since >= BAD_CODE_WINDOW_MS) badCodes.delete(ip);
     for (const lobby of lobbiesByCode.values()) {
       if (lobby.emptySince && now - lobby.emptySince > LOBBY_TTL_MS) {
         lobbiesByCode.delete(lobby.code);
@@ -303,6 +319,18 @@ export function startRelay(opts: RelayOptions): Promise<{ server: Server; port: 
       });
     });
   });
+}
+
+/**
+ * The browser's IP. Behind a local reverse proxy (Apache) every socket comes from loopback, so trust the
+ * last X-Forwarded-For hop, which the proxy itself appended. Never trust the header from anyone else.
+ */
+function clientIp(req: IncomingMessage): string {
+  const remote = req.socket.remoteAddress ?? "?";
+  const viaLocalProxy = remote === "127.0.0.1" || remote === "::1" || remote === "::ffff:127.0.0.1";
+  const forwarded = req.headers["x-forwarded-for"];
+  const hops = (Array.isArray(forwarded) ? forwarded.join(",") : forwarded ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  return viaLocalProxy && hops.length ? hops[hops.length - 1] : remote;
 }
 
 function send(ws: WebSocket, msg: object) {

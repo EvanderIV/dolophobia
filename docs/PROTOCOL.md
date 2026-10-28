@@ -10,17 +10,23 @@ Two WebSocket endpoints on the relay:
 
 | Role | Joins with | Receives | Can run |
 | --- | --- | --- | --- |
-| `ghost` | Ghost PIN (max 1 connected) | ghost view, ghost events | `ghost.event`, `ghost.hunt` (with cooldowns) |
-| `intern` | Intern PIN (max `Auth.MaxInterns`) | intern view, truck events, camera frames | `cctv.watch` |
-| `admin` | Admin PIN (the host's own console) | admin view, all events, camera frames | everything, no cooldowns |
+| `ghost` | Lobby code (max 1 connected) | ghost view, ghost events | `ghost.event`, `ghost.hunt` (with cooldowns) |
+| `intern` | Lobby code (max `Auth.MaxInterns`) | intern view, truck events, camera frames | `cctv.watch` |
+| `admin` | Lobby code + Admin PIN (the host's own console) | admin view, all events, camera frames | everything, no cooldowns |
 
-PINs are printed in the BepInEx console when the lobby opens. They're random per launch unless fixed in config.
+The lobby code and Admin PIN are printed in the BepInEx console when the lobby opens. Admin always needs its
+PIN because it reveals the ghost's answers. Set `Auth.RequireRolePins = true` to also require Ghost/Intern PINs
+(printed alongside). A join without a needed PIN fails with an error mentioning "PIN".
+
+Guessing codes is throttled: 8 join attempts per connection, and 12 wrong lobby codes per client IP per 10 minutes.
+Behind a reverse proxy on the same machine, the client IP comes from the last `X-Forwarded-For` hop. That header
+is only trusted on loopback connections.
 
 ## Browser ⇄ relay (`/play`)
 
 ```jsonc
 // → join (or resume after a page reload / host reconnect)
-{ "t": "join",   "lobby": "K7M2Q", "role": "ghost", "pin": "8XKQ3D", "name": "Sam" }
+{ "t": "join",   "lobby": "K7M2Q", "role": "ghost", "name": "Sam" }            // + "pin" for admin
 { "t": "resume", "lobby": "K7M2Q", "token": "<token from joined>" }
 
 // ← result

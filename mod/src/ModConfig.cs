@@ -11,6 +11,7 @@ internal sealed class ModConfig
     public readonly ConfigEntry<string> RelaySecret;
     public readonly ConfigEntry<string> HostKey;
 
+    public readonly ConfigEntry<bool> RequireRolePins;
     public readonly ConfigEntry<string> GhostPin;
     public readonly ConfigEntry<string> InternPin;
     public readonly ConfigEntry<string> AdminPin;
@@ -35,12 +36,14 @@ internal sealed class ModConfig
         HostKey = cfg.Bind("Relay", "HostKey", RandomToken(24),
             "Identifies this host to the relay so the lobby code survives reconnects. Keep private.");
 
+        RequireRolePins = cfg.Bind("Auth", "RequireRolePins", false,
+            "If false, friends join as Ghost or Intern with just the lobby code. Admin always needs AdminPin.");
         GhostPin = cfg.Bind("Auth", "GhostPin", "",
-            "PIN web players enter to join as the Ghost. Blank = new random PIN each launch.");
+            "PIN for the Ghost role when RequireRolePins = true. Blank = new random PIN each launch.");
         InternPin = cfg.Bind("Auth", "InternPin", "",
-            "PIN web players enter to join as an Intern. Blank = new random PIN each launch.");
+            "PIN for the Intern role when RequireRolePins = true. Blank = new random PIN each launch.");
         AdminPin = cfg.Bind("Auth", "AdminPin", "",
-            "PIN for the host's own admin console. Blank = new random PIN each launch.");
+            "PIN for the host's own admin console (always required). Blank = new random PIN each launch.");
         MaxInterns = cfg.Bind("Auth", "MaxInterns", 3, "How many intern sessions may be connected at once.");
 
         GhostEventCooldown = cfg.Bind("Ghost", "EventCooldownSeconds", 8f,

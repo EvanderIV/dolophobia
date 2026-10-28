@@ -19,8 +19,8 @@ class Peer {
   private waiters: ((m: any) => void)[] = [];
   closed: Promise<{ code: number; reason: string }>;
 
-  constructor(url: string) {
-    this.ws = new WebSocket(url);
+  constructor(url: string, headers?: Record<string, string>) {
+    this.ws = new WebSocket(url, { headers });
     this.ws.on("message", (raw, isBinary) => {
       const msg = isBinary ? { binary: Buffer.from(raw as Buffer) } : JSON.parse(raw.toString());
       const waiter = this.waiters.shift();
@@ -173,5 +173,37 @@ test("a kicked player is disconnected", async () => {
   const ghost = await join(host, lobby, "ghost");
   host.send({ t: "kick", conn: ghost.conn });
   assert.equal((await ghost.player.closed).code, 4001);
+  host.close();
+});
+
+test("guessing lobby codes is rate-limited per client IP, even across reconnects", async () => {
+  const { host, lobby } = await connectHost("dddddddddddddddddddd");
+  const guesser = { "x-forwarded-for": "203.0.113.9" }; // as Apache would append it
+
+  // 12 wrong codes spread over two connections (each connection allows 8 attempts).
+  for (const batch of [8, 4]) {
+    const p = new Peer(`${base}/play`, guesser);
+    await p.open();
+    for (let i = 0; i < batch; i++) {
+      p.send({ t: "join", lobby: `ZZZ${i}${batch}`, role: "ghost" });
+      assert.equal((await p.expect("join.failed")).error, "No lobby with that code.");
+    }
+    p.close();
+  }
+
+  // A fresh connection from the same IP is now refused, even with the right code.
+  const blocked = new Peer(`${base}/play`, guesser);
+  await blocked.open();
+  blocked.send({ t: "join", lobby, role: "ghost" });
+  assert.match((await blocked.expect("join.failed")).error, /Too many wrong lobby codes/);
+  assert.equal((await blocked.closed).code, 4029);
+
+  // Someone else behind the same proxy is unaffected.
+  const friend = new Peer(`${base}/play`, { "x-forwarded-for": "198.51.100.7" });
+  await friend.open();
+  friend.send({ t: "join", lobby, role: "ghost" });
+  assert.equal((await host.expect("auth.request")).role, "ghost");
+
+  friend.close();
   host.close();
 });

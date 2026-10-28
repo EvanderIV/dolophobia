@@ -46,8 +46,9 @@ the ghost's fuzzed radar is fuzzed on the host and the exact positions never rea
    ```powershell
    cd server; npm install; npm start          # http://localhost:4787
    ```
-6. Launch the game. The BepInEx console prints the lobby code and the Ghost / Intern / Admin PINs.
-   Open `http://localhost:4787`, enter the lobby + Admin PIN, and you should see the admin view.
+6. Launch the game. The BepInEx console prints the lobby code and your Admin PIN.
+   Open `http://localhost:4787`, pick The Host, enter the lobby + Admin PIN, and you should see the admin view.
+   Friends joining as the Ghost or an Intern only need the lobby code.
 
 ### Playing with remote friends
 
@@ -77,7 +78,7 @@ for local dev, but set it on anything public.
 | Piece | State |
 | --- | --- |
 | Relay: lobbies, PIN auth handoff, role routing, reconnect/resume, kick, camera fan-out | Working, tested (`cd server; npm test`) |
-| Mod: relay client, sessions/PINs/permissions/rate-limit/cooldowns | Written, **not yet compiled** (needs interop from step 2) |
+| Mod: relay client, sessions/PINs/permissions/rate-limit/cooldowns | Builds against the generated interop; not yet run in a live game |
 | Mod: state (sanity, rooms, ghost type/state/room, positions), events, ghost commands, CCTV | Written against the real game dump, **needs in-game verification**, see the checklist in GAME-INTERNALS |
 | Changing *other* players' sanity | Needs the mod on their client too (sanity is owner-authoritative). Planned. |
 | Voice: intern comms, ghost talk box | Not started. Plan in GAME-INTERNALS. |
